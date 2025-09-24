@@ -75,7 +75,17 @@ int main(void) {
     }
     return 0;
 }
-  
+
+/*
+Additional Explanation:
+- In the child, the variable `x` starts with the same value as in the parent
+  at the time of fork (100).
+- After fork, parent and child each have their own copy of `x`.
+- When the child changes `x` to 200, it only changes its copy.
+- When the parent changes `x` to 300, it only changes its copy.
+- The two processes do not affect each other because fork() uses
+  copy-on-write memory.
+*/  
 ```
 
 
