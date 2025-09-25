@@ -271,7 +271,7 @@ int main(void) {
 }
 
 /*
-Answer/Explanation (put this in README too):
+Answer:
 
 - All exec*() calls REPLACE the current process image with a new program (here, /bin/ls).
 - The variants differ in how you pass arguments, whether PATH is searched, and whether you
