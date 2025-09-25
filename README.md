@@ -373,12 +373,73 @@ if you use the wait in the child, there are no child processes of that process, 
 6. Write a slight modification of the previous program, this time using `waitpid()` instead of `wait()`. When would `waitpid()` be useful?
 
 ```cpp
-// Add your code or answer here. You can also add screenshots showing your program's execution.  
+// q6_waitpid.c
+// Same as q5_wait.c but using waitpid() instead of wait()
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+int main(void) {
+    pid_t pid = fork();
+
+    if (pid == 0) {
+        // Child
+        printf("Child running...\n");
+        _exit(5);
+    } else {
+        // Parent
+        int status;
+        pid_t finished = waitpid(pid, &status, 0);  // wait specifically for 'pid'
+        printf("Parent: waitpid() returned pid=%d\n", finished);
+        if (WIFEXITED(status)) {
+            printf("Parent: child exited with code %d\n", WEXITSTATUS(status));
+        }
+    }
+    return 0;
+}
+
+/*
+Answer/Explanation:
+- waitpid() works like wait(), but you can specify exactly which child PID to wait for.
+- Useful when you have multiple children and need to:
+  * Handle a specific one in a certain order, or
+  * Use options like WNOHANG for non-blocking behavior.
+*/  
 ```
 
 7. Write a program that creates a child process, and then in the child closes standard output (`STDOUT FILENO`). What happens if the child calls `printf()` to print some output after closing the descriptor?
 
 ```cpp
-// Add your code or answer here. You can also add screenshots showing your program's execution.  
+// q7_close_stdout.c
+// Child closes stdout, then tries to printf()
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int main(void) {
+    pid_t pid = fork();
+
+    if (pid == 0) {
+        // Child
+        close(STDOUT_FILENO);       // close standard output
+        printf("This will not be printed\n"); // goes nowhere
+        _exit(0);
+    } else {
+        // Parent
+        printf("Parent still has stdout\n");
+    }
+    return 0;
+}
+
+/*
+Answer/Explanation:
+- After the child closes STDOUT_FILENO, its printf() cannot write to the terminal.
+- The output from printf() in the child is lost (discarded).
+- The parent’s stdout is still open, so it prints normally.
+*/
+
 ```
 
