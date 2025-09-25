@@ -339,7 +339,35 @@ Answer/Explanation (put this in README too):
 5. Now write a program that uses `wait()` to wait for the child process to finish in the parent. What does `wait()` return? What happens if you use `wait()` in the child?
 
 ```cpp
-// Add your code or answer here. You can also add screenshots showing your program's execution.  
+// q5_wait_simple.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+int main(void) {
+    pid_t pid = fork();
+    if (pid == 0) {
+        // child
+        printf("Child running...\n");
+        _exit(7);   // exit with code 7
+    } else {
+        // parent
+        int status;
+        pid_t finished = wait(&status);
+        printf("Parent: wait() returned pid=%d\n", finished);
+        if (WIFEXITED(status)) {
+            printf("Parent: child exited with code %d\n", WEXITSTATUS(status));
+        }
+    }
+    return 0;
+}
+
+/* 
+wait return the PID of the terminated child
+if you use the wait in the child, there are no child processes of that process, so it fails
+*/
+  
 ```
 
 6. Write a slight modification of the previous program, this time using `waitpid()` instead of `wait()`. When would `waitpid()` be useful?
