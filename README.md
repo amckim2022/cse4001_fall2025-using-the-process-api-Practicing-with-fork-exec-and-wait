@@ -83,8 +83,6 @@ Additional Explanation:
 - After fork, parent and child each have their own copy of `x`.
 - When the child changes `x` to 200, it only changes its copy.
 - When the parent changes `x` to 300, it only changes its copy.
-- The two processes do not affect each other because fork() uses
-  copy-on-write memory.
 */  
 ```
 
@@ -92,12 +90,6 @@ Additional Explanation:
 2. Write a program that opens a file (with the `open()` system call) and then calls `fork()` to create a new process. Can both the child and parent access the file descriptor returned by `open()`? What happens when they are writing to the file concurrently, i.e., at the same time?
 
 ```cpp
-// q2_open_fork.c
-// Demonstrates: open() -> fork() -> concurrent writes by parent/child.
-// Run inside Docker:
-//   gcc q2_open_fork.c -o q2_open_fork
-//   ./q2_open_fork            # no O_APPEND
-//   ./q2_open_fork --append   # with O_APPEND
 
 #define _GNU_SOURCE
 #include <fcntl.h>
@@ -144,26 +136,10 @@ int main(int argc, char *argv[]) {
 }
 
 /*
-Answer / Explanation (put this in README too if you like):
+Answer
 
-- After open() and then fork(), both parent and child can use the SAME file descriptor value.
-  Why? Because fork() duplicates the process descriptor table, so both descriptors refer to the
-  same "open file description" (kernel object) — including a shared file offset.
-
-- Without O_APPEND:
-  Parent and child share the file offset and write concurrently. Their writes can race:
-  the offset advances as each process writes, and the next write may start from an offset that
-  was moved by the other process. This can cause interleaving or unexpected ordering.
-
-- With O_APPEND:
-  The kernel moves the file offset to the end before each write atomically. That means each
-  write() is appended after the current end-of-file. Records won't overwrite each other, but
-  lines from parent/child can still be interleaved in overall order (e.g., parent line 0,
-  child line 0, parent line 1, ...). If each "record" fits in a single write() call (as above),
-  the bytes of an individual record won't be torn apart.
-
-Summary:
-- Yes, both processes can access the descriptor returned by open().
+overall,
+- Yes, both processes can access the descriptor returned by open() because fork() duplicated the process descriptor table, so both descriptors refer to the same object
 - Without O_APPEND: shared offset -> racy ordering / interleaving.
 - With O_APPEND: each write appends atomically; records won't overwrite, but ordering between
   parent/child is still interleaved and non-deterministic.
@@ -174,9 +150,7 @@ Summary:
 3. Write another program using `fork()`.The child process should print “hello”; the parent process should print “goodbye”. You should try to ensure that the child process always prints first; can you do this without calling `wait()` in the parent?
 
 ```cpp
-// q3_order_no_wait.c
 // Goal: Child prints "hello" BEFORE parent prints "goodbye", WITHOUT wait().
-// Technique: Use a pipe for one-way signaling from child -> parent.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -222,20 +196,6 @@ Answer/Explanation:
 4. Write a program that calls `fork()` and then calls some form of `exec()` to run the program `/bin/ls`. See if you can try all of the variants of `exec()`, including (on Linux) `execl()`, `execle()`, `execlp()`, `execv()`, `execvp()`, and `execvpe()`. Why do you think there are so many variants of the same basic call?
 
 ```cpp
-// q4_exec_variants.c
-// Demonstrates: fork() + exec*() variants to run /bin/ls
-// Build & run inside Docker:
-//   gcc q4_exec_variants.c -o q4_exec_variants
-//   ./q4_exec_variants
-//
-// Notes:
-// - execl/execlp: pass args as a NULL-terminated list
-// - execv/execvp: pass args as a NULL-terminated vector (char *argv[])
-// - *p variants search PATH; others require full path
-// - *e variants let you specify a custom environment
-// - execvpe() is GNU-specific; guarded with __GLIBC__
-// - If exec* succeeds, it never returns; the code after it runs only on error.
-
 #define _GNU_SOURCE
 #include <errno.h>
 #include <stdio.h>
@@ -316,15 +276,6 @@ Answer/Explanation (put this in README too):
 - All exec*() calls REPLACE the current process image with a new program (here, /bin/ls).
 - The variants differ in how you pass arguments, whether PATH is searched, and whether you
   supply a custom environment:
-
-  * execl()/execv(): require a full path (e.g., "/bin/ls").
-    - 'l' = list of args (variadic), NULL-terminated.
-    - 'v' = vector of args (char *argv[]), NULL-terminated.
-
-  * execlp()/execvp(): like above, but 'p' means search PATH for the program name ("ls").
-
-  * execle()/execvpe(): 'e' means you provide an explicit environment (char *envp[]).
-    - execvpe() is a GNU extension (not on all libc implementations).
 
 - There are many variants to cover common needs:
   * Choose list vs vector depending on how you build arguments.
